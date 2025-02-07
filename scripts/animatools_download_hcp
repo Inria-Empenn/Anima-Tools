@@ -187,7 +187,6 @@ def collect_and_download(out_dir, subject, sequences):
 
     s3_keys = bucket.objects.filter(Prefix='HCP_1200/%s/'%subject)
     s3_keylist = [key.key for key in s3_keys]
-    print(s3_keylist)
  
     s3_keylist = [x for x in s3_keylist if x.endswith(tuple(sequences))]
 
