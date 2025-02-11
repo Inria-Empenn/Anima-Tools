@@ -12,5 +12,8 @@ setup(
     license="",
     packages=find_packages(),
     install_requires=[],
-    scripts=["scripts/animatools_download_hcp"]
+    scripts=[
+      "scripts/animatools_convert_bvecs",
+      "scripts/animatools_download_hcp",
+    ]
 )

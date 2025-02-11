@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+"""This script converts bvec from/to FSL convention from/to Anima-compatible
+orientation. In a nutshell, the original FSL orientation of b-vectors is 
+provided with respect to the images axes, while Anima is expecting real 
+coordinates. Also, since Anima is ITK-based, the real coordinate system is 
+LPS+, as opposed to Nifti standard which uses RAS+.
+
+NB: To avoid confusion, we recommend using the _anima suffix whenever writing 
+an Anima-specific bvec file."""
+import argparse
+import numpy as np
+import nibabel as nib
+
+
+def affine_to_isometry(affine):
+    """Provided a 4x4 affine matrix, extracts the isometric part of the 
+    transform. 
+
+    Parameters
+    ----------
+    affine : array-like, shape (4, 4)
+    
+    Returns
+    -------
+    isometry : array-like, shape (3, 3)
+    """
+    linear = affine[:3, :3]
+    scale = np.linalg.norm(linear, axis=0)
+    P, S, Q = np.linalg.svd(linear / scale)
+    return np.dot(P, Q)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+
+    parser.add_argument("-i", "--input", required=True, 
+        help="Input bvec file.")
+    parser.add_argument("-o", "--output", required=True, 
+        help="Output bvec file.")
+    parser.add_argument("-c", "--conversion", default="FSL2ANIMA", 
+        choices=["FSL2ANIMA", "ANIMA2FSL"], help="Conversion to apply.")
+    parser.add_argument("-r", "--reference", required=True, 
+        help="Reference Nifti image (e.g. the DWI volume).")
+    args = parser.parse_args()
+
+    # Read bvecs and nifti image from file
+    bvecs = np.loadtxt(args.input)
+    img = nib.load(args.reference)
+    
+    isometry = affine_to_isometry(img.affine)
+    if args.conversion == "FSL2ANIMA":
+        # These 2 lines are here because of FSL's radiological voxel 
+        # see https://fsl.fmrib.ox.ac.uk/fsl/docs/#/diffusion/faq?id=what-conventions-do-the-bvecs-use
+        if np.linalg.det(isometry) > 0:
+            bvecs[0] *= -1
+        output_bvecs = np.dot(isometry, bvecs)
+        # The next 2 lines are here because Anima is based on ITK, and real
+        # coordinates are LPS (when nifti convention is RAS).
+        output_bvecs[0] *= -1
+        output_bvecs[1] *= -1
+    elif args.conversion == "ANIMA2FSL":
+        bvecs[0] *= -1
+        bvecs[1] *= -1
+        output_bvecs = np.dot(np.linalg.inv(isometry), bvecs)
+        if np.linalg.det(isometry) > 0:
+            output_bvecs[0] *= -1
+    np.savetxt(args.output, output_bvecs)
