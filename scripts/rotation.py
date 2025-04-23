@@ -21,7 +21,8 @@ def rotation(in_file, out_file, angle, x, y, z):
       transformFilter.Update()
       writer.SetFileName(out_file)
       writer.SetInputConnection(transformFilter.GetOutputPort())
-      writer.SetFileVersion(42) #the constant 42 is defined in IO/Legacy/vtkDataWriter.h (c++ code), it corresponds to VTK_LEGACY_READER_VERSION_4_2
+      if in_file[-3:] == 'vtk':
+            writer.SetFileVersion(42) #the constant 42 is defined in IO/Legacy/vtkDataWriter.h (c++ code), it corresponds to VTK_LEGACY_READER_VERSION_4_2
       writer.Update()
       writer.Write()
 
